@@ -5,7 +5,10 @@ import (
 	"errors"
 	"example/pkg/models"
 	memory_storage "example/pkg/storage/memory-storage"
+	"fmt"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -19,7 +22,6 @@ func (h Handler) getCats(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(cats); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-
 }
 
 func (h Handler) getCat(w http.ResponseWriter, r *http.Request) {
@@ -47,7 +49,14 @@ func (h Handler) createCat(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 	}
 
-	cat, err := h.storage.CreateCat(cat)
+	newName, err := modifyCatName(cat.Name)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	cat.Name = newName
+
+	cat, err = h.storage.CreateCat(cat)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
@@ -66,4 +75,11 @@ func (h Handler) removeCat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func modifyCatName(name string) (string, error) {
+	if name == "" {
+		return "", errors.New("cat name is empty")
+	}
+	return fmt.Sprintf("%s:%s", strings.ToUpper(name), time.Now().Weekday().String()), nil
 }
